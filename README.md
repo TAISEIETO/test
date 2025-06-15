@@ -1,25 +1,40 @@
 ```mermaid
-graph LR
-    A[ユーザー] -->|自然言語で質問| B(入力解析);
-    B -->|意図・キーワード抽出| C{データ収集};
-    C -->|CiNii API| D[自然言語処理];
-    C -->|国立国会図書館サーチ API| D;
-    C -->|PubMed API| D;
-    C -->|arXiv API| D;
-    D -->|文章の意味解析・要約| E(クラスタリング);
-    E -->|分野別・トピック別に分類| F(レコメンド処理);
-    F -->|注目テーマ/未解決課題/興味と関連付け| G[出力];
-    G --> H[① 研究テーマ候補の提示];
-    G --> I[② 参考文献リストの生成];
-    G --> J[③ チャット応答形式で疑問解決];
-    H --> K[ユーザー];
-    I --> K;
-    J --> K;
+sequenceDiagram
+    participant User as ユーザー
+    participant Frontend as フロントエンド
+    participant Backend as バックエンド
+    participant AI as AI処理
+    participant DB as 外部DB (データソース)
 
-    subgraph "TANKYU AI システム"
-        B; C; D; E; F; G; H; I; J;
+    User->>Frontend: 自然言語で研究テーマを質問
+    activate Frontend
+    Frontend->>Backend: 質問内容を送信
+    deactivate Frontend
+    activate Backend
+
+    Backend->>AI: 質問の意図・キーワード抽出を依頼
+    activate AI
+    AI-->>Backend: 抽出したキーワードを返却
+    deactivate AI
+
+    loop 各データベースに問い合わせ
+        Backend->>DB: キーワードで論文データを要求 (CiNii, PubMed等) 
     end
 
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style K fill:#f9f,stroke:#333,stroke-width:2px
+    activate DB
+    DB-->>Backend: 論文データを提供
+    deactivate DB
+
+    Backend->>AI: 収集したデータでAI処理を依頼
+    activate AI
+    Note over AI: ・自然言語処理 (意味解析・要約) <br/>・クラスタリング (トピック分類) <br/>・レコメンド処理 (関連付け) 
+    AI-->>Backend: 処理結果 (テーマ候補, 参考文献リスト) を返却
+    deactivate AI
+
+    Backend-->>Frontend: 整形した表示用データを送信
+    deactivate Backend
+    activate Frontend
+    Frontend-->>User: 結果を画面に表示
+    deactivate Frontend
+
 ```
