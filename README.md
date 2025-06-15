@@ -1,40 +1,38 @@
 ```mermaid
-sequenceDiagram
-    participant User as ユーザー
-    participant Frontend as フロントエンド
-    participant Backend as バックエンド
-    participant AI as AI処理
-    participant DB as 外部DB (データソース)
-
-    User->>Frontend: 自然言語で研究テーマを質問
-    activate Frontend
-    Frontend->>Backend: 質問内容を送信
-    deactivate Frontend
-    activate Backend
-
-    Backend->>AI: 質問の意図・キーワード抽出を依頼
-    activate AI
-    AI-->>Backend: 抽出したキーワードを返却
-    deactivate AI
-
-    loop 各データベースに問い合わせ
-        Backend->>DB: キーワードで論文データを要求 (CiNii, PubMed等) 
+graph TD
+    subgraph "ユーザー領域"
+        direction LR
+        U_IN[/"ユーザーが<br/>自然言語で質問"/] --> U_OUT[/"結果を受け取る<br/>(テーマ候補・参考文献)"/]
     end
 
-    activate DB
-    DB-->>Backend: 論文データを提供
-    deactivate DB
+    subgraph "フロントエンド"
+        FE["UI / チャット画面"]
+    end
 
-    Backend->>AI: 収集したデータでAI処理を依頼
-    activate AI
-    Note over AI: ・自然言語処理 (意味解析・要約) <br/>・クラスタリング (トピック分類) <br/>・レコメンド処理 (関連付け) 
-    AI-->>Backend: 処理結果 (テーマ候補, 参考文献リスト) を返却
-    deactivate AI
+    subgraph "バックエンド"
+        direction TB
+        BE_RCV("1. リクエスト受信") --> BE_API("3. 外部APIへデータ要求")
+        BE_FMT("6. 結果をフロント用に整形")
+    end
 
-    Backend-->>Frontend: 整形した表示用データを送信
-    deactivate Backend
-    activate Frontend
-    Frontend-->>User: 結果を画面に表示
-    deactivate Frontend
+    subgraph "AI処理"
+        direction TB
+        AI_KWD["2. 意図・キーワード抽出"]
+        AI_MAIN["5. NLP・クラスタリング<br>レコメンド処理"]
+    end
 
+    subgraph "データソース (外部API)"
+        DS["CiNii / PubMed<br/>国立国会図書館サーチ / arXiv"]
+    end
+
+    %% コンポーネント間の処理フロー
+    U_IN --> FE
+    FE --> BE_RCV
+    BE_RCV --> AI_KWD
+    AI_KWD -- "抽出キーワード" --> BE_API
+    BE_API -- "キーワードでクエリ" --> DS
+    DS -- "収集した論文データ" --> AI_MAIN
+    AI_MAIN -- "生成された結果" --> BE_FMT
+    BE_FMT --> FE
+    FE --> U_OUT
 ```
